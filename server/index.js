@@ -5,9 +5,6 @@ import dotenv from 'dotenv';
 import { ScenarioModel } from './models/scenarioModel.js';
 import { UserSessionModel } from './models/userSessionModel.js';
 import { fetchAIResponse } from './services/aiService.js';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
 
 dotenv.config();
 
@@ -105,14 +102,8 @@ app.get('/api/sessions/:sessionId/summary', async (req, res) => {
 });
 
 // Root route
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-app.use(express.static(path.join(__dirname, '../dist')));
-
-// Catch-all route to serve React's index.html
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dist/index.html'));
+app.get('/', (req, res) => {
+  res.send('API is running...');
 });
 
 // Start server

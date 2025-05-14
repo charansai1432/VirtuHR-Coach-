@@ -17,7 +17,7 @@ export const fetchAIResponse = async (question, userAnswer) => {
       API_URL,
       {
         model: 'anthropic/claude-3-sonnet',
-        max_tokens: 150,
+        max_tokens: 50,
         messages: [
           {
             role: 'system',
