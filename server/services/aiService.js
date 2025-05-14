@@ -1,15 +1,19 @@
 import axios from 'axios';
 
-const API_KEY = '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';
+const API_KEY = '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';
 const API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 export const fetchAIResponse = async (question, userAnswer) => {
+  if (!API_KEY) {
+    console.error('❌ API key missing');
+    return "Unable to generate feedback. API credentials are missing.";
+  }
   try {
     const response = await axios.post(
       API_URL,
       {
-        model: 'openai/gpt-4',
-        max_tokens: 100,
+        model: 'openai/gpt-4.1',
+        max_tokens: 150,
         messages: [
           {
             role: 'system',
