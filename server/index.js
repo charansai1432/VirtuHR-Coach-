@@ -5,6 +5,8 @@ import dotenv from 'dotenv';
 import { ScenarioModel } from './models/scenarioModel.js';
 import { UserSessionModel } from './models/userSessionModel.js';
 import { fetchAIResponse } from './services/aiService.js';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
 dotenv.config();
 
