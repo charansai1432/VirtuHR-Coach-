@@ -1,6 +1,10 @@
+
+import dotenv from 'dotenv';
+dotenv.config();
 import axios from 'axios';
 
-const API_KEY = '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';
+const API_KEY = process.env.OPENROUTER_API_KEY;
+
 const API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 export const fetchAIResponse = async (question, userAnswer) => {
@@ -12,7 +16,7 @@ export const fetchAIResponse = async (question, userAnswer) => {
     const response = await axios.post(
       API_URL,
       {
-        model: 'openai/gpt-4.1',
+        model: 'anthropic/claude-3-sonnet',
         max_tokens: 150,
         messages: [
           {
