@@ -1,19 +1,22 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+
 import { motion } from 'framer-motion';
-import { Award, ChevronRight, Download, Home, BarChart } from 'lucide-react';
+import { Award, Download, Home } from 'lucide-react';
 import { useSession } from '../context/SessionContext';
 import { getSessionSummary } from '../services/api';
 import { Session } from '../types';
 
 const SessionSummary: React.FC = () => {
+  const navigate = useNavigate();
   const { currentSession, resetSession } = useSession();
   const [sessionData, setSessionData] = useState<Session | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  
+
   useEffect(() => {
     const loadSessionData = async () => {
       if (!currentSession) return;
-      
+
       try {
         setLoading(true);
         const data = await getSessionSummary(currentSession._id);
@@ -24,10 +27,53 @@ const SessionSummary: React.FC = () => {
         setLoading(false);
       }
     };
-    
+
     loadSessionData();
   }, [currentSession]);
-  
+
+  const handleReturnHome = () => {
+    resetSession();
+    navigate('/');
+  };
+
+  const handleSaveReport = () => {
+    if (!sessionData) return;
+
+    const { responses, level, startTime } = sessionData;
+
+    const reportContent = `
+Session Summary
+===============
+
+Level: ${level}
+Date: ${new Date(startTime).toLocaleDateString()}
+Scenarios Completed: ${responses.length}
+
+Responses:
+----------
+
+${responses
+  .map((res, i) => {
+    return `Scenario ${i + 1}: ${res.scenarioId.question}
+User Response: ${res.userResponse}
+AI Feedback: ${res.aiFeedback}
+
+`;
+  })
+  .join('')}
+`;
+
+    const blob = new Blob([reportContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'session-report.txt';
+    link.click();
+
+    URL.revokeObjectURL(url); // Clean up
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -35,7 +81,7 @@ const SessionSummary: React.FC = () => {
       </div>
     );
   }
-  
+
   if (!sessionData) {
     return (
       <div className="text-center p-8">
@@ -49,14 +95,14 @@ const SessionSummary: React.FC = () => {
       </div>
     );
   }
-  
+
   const { responses, level } = sessionData;
-  
+
   const getScoreColor = (index: number) => {
     const colors = ['bg-green-100 text-green-700', 'bg-blue-100 text-blue-700', 'bg-purple-100 text-purple-700'];
     return colors[index % colors.length];
   };
-  
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -68,20 +114,15 @@ const SessionSummary: React.FC = () => {
         <div className="inline-block p-3 rounded-full bg-blue-100 text-blue-600 mb-4">
           <Award size={32} />
         </div>
-        <h1 className="text-3xl font-bold text-gray-800 mb-4">
-          Session Summary
-        </h1>
+        <h1 className="text-3xl font-bold text-gray-800 mb-4">Session Summary</h1>
         <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-          You've completed the {level.charAt(0).toUpperCase() + level.slice(1)} level session. 
-          Here's a summary of your performance.
+          You've completed the {level.charAt(0).toUpperCase() + level.slice(1)} level session. Here's a summary of your performance.
         </p>
       </div>
-      
+
       <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-8">
         <div className="p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-800 mb-2">
-            Session Overview
-          </h2>
+          <h2 className="text-xl font-semibold text-gray-800 mb-2">Session Overview</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
             <div className="bg-blue-50 rounded-lg p-4">
               <div className="text-sm text-gray-600 mb-1">Level</div>
@@ -99,11 +140,9 @@ const SessionSummary: React.FC = () => {
             </div>
           </div>
         </div>
-        
+
         <div className="p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">
-            Response Details
-          </h3>
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">Response Details</h3>
           <div className="space-y-6">
             {responses.map((response, index) => (
               <div key={index} className="border border-gray-200 rounded-lg overflow-hidden">
@@ -115,7 +154,7 @@ const SessionSummary: React.FC = () => {
                 <div className="p-4 border-t border-gray-200">
                   <div className="text-sm font-medium text-gray-600 mb-2">Your Response:</div>
                   <p className="text-gray-700 mb-4">{response.userResponse}</p>
-                  
+
                   <div className="text-sm font-medium text-gray-600 mb-2">Feedback:</div>
                   <div className={`p-3 rounded-lg ${getScoreColor(index)}`}>
                     {response.aiFeedback}
@@ -126,20 +165,21 @@ const SessionSummary: React.FC = () => {
           </div>
         </div>
       </div>
-      
+
       <div className="flex justify-between items-center">
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          onClick={resetSession}
+          onClick={handleReturnHome}
           className="flex items-center bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg shadow-md transition-colors"
         >
           <Home size={18} className="mr-2" /> Return Home
         </motion.button>
-        
+
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
+          onClick={handleSaveReport}
           className="flex items-center border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 px-6 py-3 rounded-lg shadow-sm transition-colors"
         >
           <Download size={18} className="mr-2" /> Save Report

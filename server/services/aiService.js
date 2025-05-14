@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_KEY = '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';
+const API_KEY = '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';
 const API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 export const fetchAIResponse = async (question, userAnswer) => {
@@ -9,7 +9,7 @@ export const fetchAIResponse = async (question, userAnswer) => {
       API_URL,
       {
         model: 'openai/gpt-4',
-        max_tokens: 150,
+        max_tokens: 100,
         messages: [
           {
             role: 'system',

@@ -16,18 +16,26 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
   onFeedbackPlayed,
   isActive
 }) => {
-  const [isListening, setIsListening] = useState<boolean>(false);
-  const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
-  const [userResponse, setUserResponse] = useState<string>('');
-  const [hasSpokenQuestion, setHasSpokenQuestion] = useState<boolean>(false);
-  
+  const [isListening, setIsListening] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [userResponse, setUserResponse] = useState('');
+  const [hasSpokenQuestion, setHasSpokenQuestion] = useState(false);
+  const [responseSubmitted, setResponseSubmitted] = useState(false);
+
   // Speak the question when component becomes active
   useEffect(() => {
     if (isActive && !hasSpokenQuestion) {
       speakQuestion();
     }
   }, [isActive, hasSpokenQuestion]);
-  
+
+  // Reset state when question changes
+  useEffect(() => {
+    setUserResponse('');
+    setResponseSubmitted(false);
+    setHasSpokenQuestion(false);
+  }, [question]);
+
   const speakQuestion = useCallback(() => {
     setIsSpeaking(true);
     speechService.speak(question, () => {
@@ -35,10 +43,10 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
       setHasSpokenQuestion(true);
     });
   }, [question]);
-  
+
   const startListening = useCallback(() => {
-    if (!isActive) return;
-    
+    if (!isActive || responseSubmitted) return;
+
     setIsListening(true);
     speechService.startListening(
       (text) => {
@@ -46,19 +54,15 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
       },
       () => {
         setIsListening(false);
-        // Auto-submit after stopping listening if we have a response
-        if (userResponse.trim().length > 0) {
-          // onResponseComplete(userResponse);
-        }
       }
     );
-  }, [isActive, onResponseComplete, userResponse]);
-  
+  }, [isActive, responseSubmitted]);
+
   const stopListening = useCallback(() => {
     setIsListening(false);
     speechService.stopListening();
   }, []);
-  
+
   const toggleListening = useCallback(() => {
     if (isListening) {
       stopListening();
@@ -66,7 +70,14 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
       startListening();
     }
   }, [isListening, startListening, stopListening]);
-  
+
+  const handleSubmit = () => {
+    if (userResponse.trim().length > 0) {
+      onResponseComplete(userResponse);
+      setResponseSubmitted(true);
+    }
+  };
+
   const replayQuestion = useCallback(() => {
     if (isSpeaking) {
       speechService.stopSpeaking();
@@ -75,33 +86,27 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
       speakQuestion();
     }
   }, [isSpeaking, speakQuestion]);
-  
-  // Clean up on unmount
+
   useEffect(() => {
     return () => {
       speechService.stopListening();
       speechService.stopSpeaking();
     };
   }, []);
-  
-  const speakFeedback = useCallback((feedback: string) => {
-    setIsSpeaking(true);
-    speechService.speak(feedback, () => {
-      setIsSpeaking(false);
-      if (onFeedbackPlayed) {
-        onFeedbackPlayed();
-      }
-    });
-  }, [onFeedbackPlayed]);
-  
-  // Expose the speakFeedback function through a ref
-  React.useImperativeHandle(
-    React.createRef(),
-    () => ({
-      speakFeedback
-    })
+
+  const speakFeedback = useCallback(
+    (feedback: string) => {
+      setIsSpeaking(true);
+      speechService.speak(feedback, () => {
+        setIsSpeaking(false);
+        if (onFeedbackPlayed) {
+          onFeedbackPlayed();
+        }
+      });
+    },
+    [onFeedbackPlayed]
   );
-  
+
   return (
     <div className="w-full">
       <AnimatePresence mode="wait">
@@ -119,20 +124,20 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
                 <button
                   onClick={replayQuestion}
                   className={`p-2 rounded-full transition-colors ${
-                    isSpeaking 
-                      ? 'bg-red-100 text-red-600 hover:bg-red-200' 
+                    isSpeaking
+                      ? 'bg-red-100 text-red-600 hover:bg-red-200'
                       : 'bg-blue-100 text-blue-600 hover:bg-blue-200'
                   }`}
-                  aria-label={isSpeaking ? "Stop speaking" : "Replay question"}
+                  aria-label={isSpeaking ? 'Stop speaking' : 'Replay question'}
                 >
                   {isSpeaking ? <VolumeX size={20} /> : <Volume2 size={20} />}
                 </button>
               </div>
-              
+
               <div className="p-4 bg-blue-50 rounded-lg mb-4">
                 <p className="text-gray-700">{question}</p>
               </div>
-              
+
               {userResponse && (
                 <div className="p-4 bg-gray-50 rounded-lg">
                   <h4 className="font-medium text-gray-700 mb-2">Your Response:</h4>
@@ -140,22 +145,24 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
                 </div>
               )}
             </div>
-            
+
             <div className="flex justify-center">
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={toggleListening}
-                disabled={isSpeaking}
+                disabled={isSpeaking || responseSubmitted}
                 className={`
                   flex items-center justify-center p-4 rounded-full shadow-md
-                  ${isListening 
-                    ? 'bg-red-500 hover:bg-red-600' 
-                    : 'bg-blue-500 hover:bg-blue-600'}
-                  ${isSpeaking ? 'opacity-50 cursor-not-allowed' : ''}
+                  ${isListening ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-500 hover:bg-blue-600'}
+                  ${
+                    isSpeaking || responseSubmitted
+                      ? 'opacity-50 cursor-not-allowed'
+                      : ''
+                  }
                   text-white transition-all duration-300
                 `}
-                aria-label={isListening ? "Stop recording" : "Start recording"}
+                aria-label={isListening ? 'Stop recording' : 'Start recording'}
               >
                 {isListening ? (
                   <MicOff size={28} className="animate-pulse" />
@@ -164,9 +171,25 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
                 )}
               </motion.button>
             </div>
-            
+
+            {userResponse && !isListening && !responseSubmitted && (
+              <>
+                <div className="text-center mt-4 text-sm text-gray-600">
+                  If you're satisfied with your answer, click <strong>Submit Response</strong>.
+                </div>
+                <div className="flex justify-center mt-2">
+                  <button
+                    onClick={handleSubmit}
+                    className="px-6 py-2 bg-green-600 text-white rounded-full hover:bg-green-700 transition"
+                  >
+                    Submit Response
+                  </button>
+                </div>
+              </>
+            )}
+
             {isListening && (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 className="text-center mt-4 text-sm text-gray-600"
@@ -174,8 +197,8 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
                 Listening... Speak your response
               </motion.div>
             )}
-            
-            {!isListening && !userResponse && hasSpokenQuestion && (
+
+            {!isListening && !userResponse && hasSpokenQuestion && !responseSubmitted && (
               <div className="text-center mt-4 text-sm text-gray-600">
                 Click the microphone to start speaking
               </div>
