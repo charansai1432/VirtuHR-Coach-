@@ -22,9 +22,3 @@ export interface Session {
   responses: SessionResponse[];
   overallFeedback?: string;
 }
-
-export interface UserState {
-  id: string;
-  currentSession?: Session;
-  completedScenarios: string[];
-}
