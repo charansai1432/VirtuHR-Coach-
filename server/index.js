@@ -8,7 +8,13 @@ import { fetchAIResponse } from './services/aiService.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User from './models/User.js'; // or the correct relative path
-import userroutes from './routes/userRoutes.js'; // or the correct relative path
+import userroutes from './routes/userRoutes.js'; 
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+
+// or the correct relative path
 dotenv.config();
 
 const app = express();
@@ -204,11 +210,20 @@ app.get('/api/auth/me', auth, async (req, res) => {
   }
 });
 app.use('/users', userroutes);
-// Root route
-app.get('/', (req, res) => {
-  res.send('API is running...');
-});
+// // Root route
+// app.get('/', (req, res) => {
+//   res.send('API is running...');
+// });
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+app.use(express.static(path.join(__dirname, '../dist')));
+
+// Catch-all route to serve React's index.html
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dist/index.html'));
+});
 // Start server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
