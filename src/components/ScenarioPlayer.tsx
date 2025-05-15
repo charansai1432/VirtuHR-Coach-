@@ -4,7 +4,7 @@ import VoiceAssistant from './VoiceAssistant';
 import FeedbackDisplay from './FeedbackDisplay';
 import ProgressTracker from './ProgressTracker';
 import { useSession } from '../context/SessionContext';
-import { Scenario } from '../types';
+// import { Scenario } from '../types';
 
 interface ScenarioPlayerProps {
   onComplete: () => void;

@@ -5,12 +5,15 @@ import dotenv from 'dotenv';
 import { ScenarioModel } from './models/scenarioModel.js';
 import { UserSessionModel } from './models/userSessionModel.js';
 import { fetchAIResponse } from './services/aiService.js';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import User from './models/User.js'; // or the correct relative path
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -101,6 +104,105 @@ app.get('/api/sessions/:sessionId/summary', async (req, res) => {
   }
 });
 
+// Routes
+app.post('/api/auth/signup', async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+    
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: 'User already exists' });
+    }
+    
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+    
+    // Create new user
+    const user = new User({
+      name,
+      email,
+      password: hashedPassword,
+    });
+    
+    await user.save();
+    
+    res.status(201).json({ message: 'User created successfully' });
+  } catch (error) {
+    console.error('Signup error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+app.post('/api/auth/signin', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    // Check if user exists
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
+    
+    // Check password
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
+    
+    // Create JWT token
+    const token = jwt.sign(
+      { id: user._id },
+      JWT_SECRET,
+      { expiresIn: '1d' }
+    );
+    
+    res.json({
+      token,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+      },
+    });
+  } catch (error) {
+    console.error('Signin error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Auth middleware
+const auth = (req, res, next) => {
+  // Get token from header
+  const token = req.header('Authorization')?.replace('Bearer ', '');
+  
+  if (!token) {
+    return res.status(401).json({ message: 'No token, authorization denied' });
+  }
+  
+  try {
+    // Verify token
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (error) {
+    res.status(401).json({ message: 'Token is not valid' });
+  }
+};
+
+app.get('/api/auth/me', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('-password');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.json(user);
+  } catch (error) {
+    console.error('Get user error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 
 // Root route
 app.get('/', (req, res) => {

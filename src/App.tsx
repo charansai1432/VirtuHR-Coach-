@@ -1,9 +1,16 @@
 import React, { useState } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+
 import DifficultySelector from './components/DifficultySelector';
 import ScenarioPlayer from './components/ScenarioPlayer';
 import SessionSummary from './components/SessionSummary';
+
 import { SessionProvider, useSession } from './context/SessionContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
+
+import Signup from './components/auth/Signup';
+import Signin from './components/auth/Signin';
 
 enum AppState {
   SELECTION,
@@ -16,19 +23,18 @@ const AppContent: React.FC = () => {
   const [appState, setAppState] = useState<AppState>(
     isSessionActive ? AppState.PLAYING : AppState.SELECTION
   );
-  
-  // Watch for session changes
+
   React.useEffect(() => {
     if (isSessionActive && appState === AppState.SELECTION) {
       setAppState(AppState.PLAYING);
     }
   }, [isSessionActive, appState]);
-  
+
   const handleSessionComplete = async () => {
     await endSession();
     setAppState(AppState.SUMMARY);
   };
-  
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white shadow-sm">
@@ -43,7 +49,7 @@ const AppContent: React.FC = () => {
           )}
         </div>
       </header>
-      
+
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <AnimatePresence mode="wait">
           {appState === AppState.SELECTION && (
@@ -57,7 +63,7 @@ const AppContent: React.FC = () => {
               <DifficultySelector />
             </motion.div>
           )}
-          
+
           {appState === AppState.PLAYING && (
             <motion.div
               key="playing"
@@ -69,7 +75,7 @@ const AppContent: React.FC = () => {
               <ScenarioPlayer onComplete={handleSessionComplete} />
             </motion.div>
           )}
-          
+
           {appState === AppState.SUMMARY && (
             <motion.div
               key="summary"
@@ -87,12 +93,38 @@ const AppContent: React.FC = () => {
   );
 };
 
-function App() {
+const PrivateRoute = ({ children }: { children: JSX.Element }) => {
+  const { user } = useAuth();
+  return user ? children : <Navigate to="/signin" />;
+};
+
+const AppRoutes = () => {
+  const { user } = useAuth();
   return (
-    <SessionProvider>
-      <AppContent />
-    </SessionProvider>
+    <Routes>
+      <Route path="/" element={user ? <Navigate to="/home" /> : <Navigate to="/signup" />} />
+      <Route path="/signup" element={<Signup />} />
+      <Route path="/signin" element={<Signin />} />
+      <Route
+        path="/home"
+        element={
+          <PrivateRoute>
+            <AppContent />
+          </PrivateRoute>
+        }
+      />
+    </Routes>
   );
-}
+};
+
+const App = () => {
+  return (
+    <AuthProvider>
+      <SessionProvider>
+        <AppRoutes />
+      </SessionProvider>
+    </AuthProvider>
+  );
+};
 
 export default App;
