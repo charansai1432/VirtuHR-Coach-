@@ -1,64 +1,56 @@
-
+import axios from 'axios';
 import dotenv from 'dotenv';
 dotenv.config();
-import axios from 'axios';
 
-const API_KEY = process.env.OPENROUTER_API_KEY;
+export const fetchAIResponse = async (question, answer) => {
+  const apiKey = process.env.OPENROUTER_API_KEY;
 
-const API_URL = 'https://openrouter.ai/api/v1/chat/completions';
-
-export const fetchAIResponse = async (question, userAnswer) => {
-  if (!API_KEY) {
-    console.error('❌ API key missing');
-    return "Unable to generate feedback. API credentials are missing.";
+  if (!apiKey) {
+    console.error('❌ OpenRouter API key is missing in environment variables.');
+    return "I'm currently unable to provide feedback due to missing API credentials.";
   }
+
   try {
     const response = await axios.post(
-      API_URL,
+      'https://openrouter.ai/api/v1/chat/completions',
       {
-        model: 'anthropic/claude-3-sonnet',
-        max_tokens: 50,
+        model: 'qwen/qwen3-235b-a22b',
         messages: [
-          {
-            role: 'system',
-            content: `You are Neha, a friendly HR coach. You provide supportive, encouraging feedback.`,
-          },
-          {
-            role: 'user',
-            content: `The user answered: "${userAnswer}" for the question: "${question}".\n
-If the answer is good, praise them.
-If it needs improvement, gently coach them.
-Always sound encouraging and supportive.
-
-Limit your response to 150 words.`,
-          },
-        ],
+      { role: 'system', content: 'You are an HR feedback coach. Give concise feedback in no more than 4 lines.' },
+      { role: 'user', content: `Give feedback on the following response.\n\nQuestion: ${question}\nResponse: ${answer}` }
+    ]
       },
       {
         headers: {
-          Authorization: `Bearer ${API_KEY}`,
+          'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
-        },
+          // Optional headers:
+          // 'HTTP-Referer': 'https://your-domain.com/',
+          // 'X-Title': 'Virtual HR Coach'
+        }
       }
     );
 
-    // Log full response
-    console.log('Full OpenRouter response:', JSON.stringify(response.data, null, 2));
-
-    // Defensive check
-    if (
-      response.data &&
-      Array.isArray(response.data.choices) &&
-      response.data.choices.length > 0 &&
-      response.data.choices[0].message
-    ) {
-      return response.data.choices[0].message.content;
-    } else {
-      console.error("AI response missing 'choices' or 'message':", response.data);
-      return "Sorry, I couldn't generate feedback right now.";
-    }
+    return response.data.choices[0].message.content;
   } catch (error) {
-    console.error('Error fetching AI response:', error?.response?.data || error.message || error);
-    return "I couldn't generate feedback right now. Let's continue with our practice session.";
+    // 🔍 Log structured error
+    if (error.response) {
+      const { status, data } = error.response;
+      console.error(`❌ AI response error:`, { status, data });
+
+      if (status === 401) {
+        return "Your API key is invalid or expired. Please check your OpenRouter credentials.";
+      } else if (status === 402) {
+        return "You've run out of credits. Please top up your OpenRouter account to continue using AI feedback.";
+      } else if (status === 429) {
+        return "You're sending requests too quickly. Please slow down and try again.";
+      } else {
+        return "I'm currently unable to provide feedback due to a server error.";
+      }
+    } else {
+      // 🔌 Network or unknown error
+      console.error('❌ AI request failed:', error.message);
+      return "Something went wrong while generating feedback. Please check your network and try again.";
+    }
   }
 };
