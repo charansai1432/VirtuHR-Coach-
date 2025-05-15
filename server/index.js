@@ -8,7 +8,7 @@ import { fetchAIResponse } from './services/aiService.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User from './models/User.js'; // or the correct relative path
-
+import userroutes from './routes/userRoutes.js'; // or the correct relative path
 dotenv.config();
 
 const app = express();
@@ -203,7 +203,7 @@ app.get('/api/auth/me', auth, async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
-
+app.use('/users', userroutes);
 // Root route
 app.get('/', (req, res) => {
   res.send('API is running...');

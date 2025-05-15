@@ -11,7 +11,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 
 import Signup from './components/auth/Signup';
 import Signin from './components/auth/Signin';
-
+import Profile from './pages/Profile';
 enum AppState {
   SELECTION,
   PLAYING,
@@ -105,6 +105,7 @@ const AppRoutes = () => {
       <Route path="/" element={user ? <Navigate to="/home" /> : <Navigate to="/signup" />} />
       <Route path="/signup" element={<Signup />} />
       <Route path="/signin" element={<Signin />} />
+      <Route path="/profile" element={<Profile />} />
       <Route
         path="/home"
         element={
